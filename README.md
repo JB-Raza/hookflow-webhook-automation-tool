@@ -1,102 +1,599 @@
-# HookFlow - Webhook Automation Bridge
-
-HookFlow is a developer-centric automation tool that receives webhooks from any source, transforms the data using rules or AI, and forwards it to multiple destinations such as Discord, Slack, Email, and Custom Webhooks.
+# HookFlow - Project Context
 
 ---
 
-# The Problem This Solves
+# What is HookFlow?
 
-Modern companies use 5 to 20 different SaaS tools. These tools usually do not communicate with each other directly. Every time two services need to integrate, developers spend hours reading documentation and writing custom integration code.
+HookFlow is a webhook automation bridge.
 
-## Example Scenario
+It receives data from one service, modifies that data based on user-defined rules, and sends it to another service.
 
-You want:
-
-> "When a Stripe payment fails, send an alert to Slack and create a ticket in HubSpot."
+Think of it as a programmable middleman that sits between services that do not normally communicate with each other.
 
 ---
 
-## Without HookFlow (The Manual Way)
+# What Problem Does It Solve?
 
-| Step | Task | Time |
-|---|---|---|
-| 1 | Read Stripe webhook documentation | 2 hours |
-| 2 | Build a server to receive Stripe webhooks | 4 hours |
-| 3 | Read Slack webhook documentation | 1 hour |
-| 4 | Add Slack integration | 2 hours |
-| 5 | Read HubSpot API documentation | 3 hours |
-| 6 | Add HubSpot integration | 4 hours |
-| 7 | Deploy and monitor everything | 2 hours |
-| **Total** | **For ONE connection** | **18 hours** |
+Companies use many different tools, but those tools usually cannot communicate directly.
 
-Now multiply that by every integration your company needs:
+Normally, developers must write custom integration code every time two services need to exchange data.
 
-| Connection | Hours |
-|---|---|
-| Stripe → Slack | 18 |
-| Stripe → HubSpot | 18 |
-| GitHub → Slack | 18 |
-| GitHub → PagerDuty | 18 |
-| Datadog → Slack | 18 |
-| Datadog → PagerDuty | 18 |
-| **Total** | **108 hours** |
+HookFlow eliminates that custom code.
 
-### Estimated Cost
-
-- Developer cost: **$100/hour**
-- Total cost: **$10,800**
+Users configure the connection once through a dashboard, and after that, every event automatically flows from source to destination.
 
 ---
 
-## With HookFlow
+# What Will HookFlow Do?
 
-Build HookFlow once.
+## Core Capability
 
-After that, every new integration takes around **10 minutes** through a UI configuration. No coding required.
-
-### Time Comparison
-
-- 6 integrations × 10 minutes
-- Total setup time: **1 hour**
-
-### Estimated Cost
-
-- Total cost: **$100**
+Receive a webhook → transform the data → forward it somewhere else.
 
 ---
 
-# What HookFlow Does
+## Example 1: GitHub → Discord
 
-HookFlow acts as a middleman between services that do not natively integrate.
+When someone pushes code to GitHub:
 
-## Workflow
+1. HookFlow catches the webhook event
+2. Extracts the commit message
+3. Rewrites it into a readable sentence
+4. Sends that sentence to a Discord channel
 
-1. User creates a **Flow** in the HookFlow dashboard
-2. HookFlow generates a unique webhook URL
+---
+
+## Example 2: Stripe → Email + Task Management
+
+When a customer's payment fails in Stripe:
+
+1. HookFlow detects the event
+2. Checks if the amount is over `$100`
+3. Sends an email to the support team
+4. Creates a task in a project management tool
+
+---
+
+# How HookFlow Works (No Code)
+
+---
+
+## Step 1 - User Creates a Flow
+
+The user logs into the HookFlow dashboard and creates a new flow.
+
+They configure:
+
+- Flow name
+- Source service
+- Destination service
+- Transformation rules
+- Filter conditions
+
+---
+
+## Step 2 - HookFlow Generates a URL
+
+The system generates a unique webhook URL for that flow.
+
+Example:
 
 ```txt
 https://hookflow.io/hook/abc-123
 ```
 
-3. User pastes that URL into any service that supports webhooks such as:
-   - GitHub
-   - Stripe
-   - Discord
-   - Datadog
-   - Shopify
-   - Any custom service
+The user copies this URL.
 
-4. When the service sends data to HookFlow, it:
-   - Receives the raw JSON payload
-   - Transforms the data using rules or AI
-   - Forwards the transformed payload to configured destinations
-   - Logs every request and response
+---
+
+## Step 3 - User Configures the Source
+
+The user goes to the source platform (GitHub, Stripe, etc.) and pastes the HookFlow URL into the webhook configuration page.
+
+Optional:
+- Secret key for request verification
+
+---
+
+## Step 4 - User Configures the Destination
+
+The user configures the destination service.
+
+Examples:
+- Discord webhook URL
+- Slack webhook URL
+- Email credentials
+- API endpoint
+
+---
+
+## Step 5 - Source Sends Data
+
+When an event happens:
+- GitHub push
+- Stripe payment failure
+- Datadog alert
+
+The source service sends a JSON payload as an HTTP POST request to the HookFlow URL.
+
+---
+
+## Step 6 - HookFlow Processes the Data
+
+HookFlow:
+
+1. Receives the JSON payload
+2. Finds which flow owns the URL
+3. Checks whether the flow is active
+4. Verifies secret key if configured
+5. Applies transformation rules
+6. Runs filters
+7. Optionally sends data to AI for summarization or rewriting
+
+---
+
+## Step 7 - HookFlow Forwards the Data
+
+HookFlow sends the transformed data to the destination service.
+
+Examples:
+- Discord
+- Slack
+- Email
+- Custom APIs
+
+If the destination fails:
+- HookFlow retries automatically
+- Delays are added between attempts
+
+---
+
+## Step 8 - HookFlow Records Everything
+
+For every request, HookFlow stores:
+
+- Raw incoming payload
+- Transformed payload
+- Destination response
+- Timestamp
+- Success or failure state
+- Retry history
+
+Users can view this in real-time on the dashboard.
+
+---
+
+# Main Components of HookFlow
+
+---
+
+## User Management
+
+Users can:
+
+- Create accounts
+- Log in
+- Manage their own flows
+- View only their own logs
+
+---
+
+## Flow Management
+
+Users can:
+
+- Create flows
+- Edit flows
+- Delete flows
+- Disable flows temporarily
+
+Each flow contains:
+- Unique webhook URL
+- Transformation rules
+- Filters
+- Destination configuration
+
+---
+
+## Webhook Receiver
+
+A public HTTP endpoint that:
+
+- Accepts POST requests
+- Extracts flow identifier from URL
+- Saves raw incoming data immediately
+
+Purpose:
+- Prevent data loss
+- Ensure reliable logging
+
+---
+
+## Transformation Engine
+
+The transformation engine modifies incoming JSON.
+
+### Supported Modes
+
+#### Manual Mapping
+
+User selects:
+- which fields to keep
+- how to rename them
+
+---
+
+#### Filter Rules
+
+Example:
+
+```txt
+Only forward if amount > 100
+```
+
+---
+
+#### AI Processing
+
+Send payload to AI with custom prompt.
+
+Example:
+
+```txt
+Summarize this error for non-technical users
+```
+
+---
+
+## Forwarder
+
+Responsible for sending transformed data to destinations.
+
+### Supported Destinations
+
+- Discord webhooks
+- Slack webhooks
+- Custom APIs
+- Email via SMTP
+- Services with REST APIs
+
+---
+
+## Logging System
+
+Every request stores complete history.
+
+Users can:
+- Browse logs
+- Filter logs
+- Open log details
+- Inspect transformations
+- Inspect destination responses
+
+---
+
+## Real-Time Feed
+
+Dashboard updates instantly when new webhooks arrive.
+
+No page refresh required.
+
+---
+
+## Dashboard
+
+The dashboard allows users to:
+
+- Create flows
+- Configure transformations
+- Monitor activity
+- View logs
+- Test configurations
+
+---
+
+# Key Decisions the User Makes Per Flow
+
+The user configures:
+
+| Setting | Description |
+|---|---|
+| Name | Internal reference name |
+| Source Type | Service sending webhook |
+| Secret Key | Optional verification secret |
+| Active / Inactive | Whether flow should process events |
+| Transformation Rules | How incoming data should change |
+| Filter Condition | Whether event should forward |
+| Destination Type | Where data should go |
+| Destination Address | Webhook URL / Email / API |
+| Retry Settings | Retry attempts and delays |
+
+---
+
+# What the User Does NOT Configure
+
+The user does **not** control:
+
+| Item | Reason |
+|---|---|
+| Incoming JSON structure | Determined by source service |
+| HTTP method | Always POST |
+| Content type | Usually JSON |
+| When webhooks are sent | Controlled by source platform |
+
+---
+
+# Failure Scenarios
+
+---
+
+## Scenario 1 - Malformed JSON
+
+HookFlow:
+- Saves request
+- Marks log as failed
+- Shows error in dashboard
+
+---
+
+## Scenario 2 - Destination Is Down
+
+HookFlow:
+- Retries request
+- Waits between attempts
+- Logs all failures
+
+If retries exhaust:
+- Log marked failed
+
+---
+
+## Scenario 3 - Filter Syntax Error
+
+HookFlow:
+- Receives webhook successfully
+- Saves payload
+- Fails during filter evaluation
+- Does not forward request
+
+Error appears in logs.
+
+---
+
+## Scenario 4 - AI Service Unavailable
+
+Transformation fails.
+
+Result:
+- Data not forwarded
+- Error logged in dashboard
+
+---
+
+# Dashboard Pages
+
+---
+
+## Flows Page
+
+Displays:
+- Flow name
+- Status
+- Webhook URL
+- Last modified date
+
+Actions:
+- Create
+- Edit
+- Delete
+- Enable / Disable
+
+---
+
+## Flow Editor Page
+
+Sections include:
+
+- Basic info
+- Source configuration
+- Transformation rules
+- Filter conditions
+- Destination settings
+- Retry policy
+
+---
+
+## Logs Page
+
+Displays:
+
+- Timestamp
+- Flow name
+- Status
+- Destination response summary
+
+Filters:
+- Flow name
+- Success / failure
+
+---
+
+## Log Detail Page
+
+Displays:
+
+- Raw incoming JSON
+- Transformed payload
+- AI output
+- Destination response
+- Errors
+- Retry history
+- Timestamps
+
+---
+
+# What Is NOT Included in MVP
+
+The initial version does NOT include:
+
+- Team accounts
+- Multi-user organizations
+- Scheduled jobs / cron triggers
+- Custom JavaScript execution
+- Native mobile app
+- CSV / JSON export
+- Built-in webhook testing
+- Rate limiting
+- Idempotency protection
+- File upload support
+- Custom webhook domains
+
+---
+
+# MVP Success Checklist
+
+## Required Features
+
+- [ ] User registration and login
+- [ ] Create flows
+- [ ] Generate unique webhook URLs
+- [ ] Receive test POST requests
+- [ ] Save webhook data to database
+- [ ] Forward payload to destination
+- [ ] Display logs in dashboard
+- [ ] View raw and transformed payloads
+
+---
+
+## Nice-to-Have Features
+
+- [ ] Transformation UI
+- [ ] Filter conditions
+- [ ] AI integration
+- [ ] Real-time logs
+- [ ] Secret verification
+- [ ] Retry system
+
+---
+
+# Target User
+
+The ideal user is:
+
+- Developer
+- Technical product person
+- Automation-focused team
+
+They:
+- Understand webhooks
+- Use tools like GitHub, Stripe, Discord
+- Want automation without maintaining custom code
+
+They expect:
+- Clean UI
+- Reliable logs
+- Clear error handling
+
+---
+
+# Product Limitations
+
+Users should understand:
+
+---
+
+## Webhook Dependency
+
+HookFlow only works with services that support outgoing webhooks.
+
+---
+
+## Destination Dependency
+
+HookFlow can only send data to:
+- webhook endpoints
+- APIs
+- email systems
+
+---
+
+## Log Retention
+
+Logs are not permanent analytics storage.
+
+They accumulate until:
+- deleted
+- expired
+- archived
+
+---
+
+## Delivery Guarantees
+
+HookFlow retries delivery but does not guarantee permanent delivery.
+
+If destination remains unavailable too long:
+- event may be dropped
+
+---
+
+## AI Costs
+
+AI transformations require external AI APIs.
+
+Additional AI usage costs are not included by HookFlow.
+
+---
+
+# Final Product Vision
+
+HookFlow is a universal automation bridge between disconnected services.
+
+Instead of writing custom integrations repeatedly, users configure flows visually while HookFlow handles:
+
+- Webhook ingestion
+- Transformation
+- AI processing
+- Delivery
+- Retries
+- Monitoring
+- Logging
+
+The goal is:
+
+> Faster integrations, lower engineering cost, and complete visibility into automated workflows.
+
+---
+
+# Business Case: The Real Cost of Custom Integrations
+
+Every time two services need to communicate, developers spend significant time building and maintaining custom integration code.
+
+## Without HookFlow
+
+A single integration (e.g. Stripe → Slack) involves:
+
+- Reading the source service's webhook documentation
+- Building a server to receive webhooks
+- Reading the destination service's documentation
+- Building the forwarding logic
+- Deploying and monitoring everything
+
+Each integration takes approximately 18 hours of developer time at an estimated cost of $100/hour.
+
+Multiply that across six typical company integrations and the total cost reaches roughly $10,800.
+
+## With HookFlow
+
+Each new integration takes approximately 10 minutes through the dashboard UI. No coding required.
+
+Six integrations take about one hour total, bringing the cost down to approximately $100.
 
 ---
 
 # Real-World Use Cases
 
-| Trigger (Webhook Source) | Action (Destination) | Use Case |
+| Trigger (Source) | Action (Destination) | Purpose |
 |---|---|---|
 | GitHub push event | Discord channel | Notify team when code is pushed |
 | Stripe payment failed | Slack + Email | Alert sales team and notify customer |
@@ -106,352 +603,55 @@ https://hookflow.io/hook/abc-123
 
 ---
 
-# How HookFlow Works (7-Step Flow)
+# Technology Stack Decisions
 
-1. User creates a Flow in the dashboard
-2. HookFlow generates a unique webhook endpoint
-3. User adds the endpoint to GitHub, Stripe, or another webhook-enabled service
-4. External service sends JSON payload to HookFlow
-5. HookFlow stores the raw payload in MongoDB
-6. HookFlow transforms the payload using:
-   - Field mapping
-   - Conditions
-   - AI prompts
-7. HookFlow forwards the transformed payload to destinations such as:
-   - Discord
-   - Slack
-   - Email
-   - Custom Webhooks
-
-Finally, the user can view every request and response in a live dashboard.
-
----
-
-# Technical Architecture
-
-## Technology Stack
-
-| Component | Technology | Why |
+| Component | Technology | Reason |
 |---|---|---|
-| Frontend | Next.js (App Router) | SEO + React dashboard |
+| Frontend | Next.js (App Router) | SEO support and React-based dashboard |
 | Backend | Node.js + Express | Fast webhook ingestion |
-| Database | MongoDB | Flexible JSON schema |
-| Real-time Updates | Socket.io | Live logs without refresh |
-| AI Integration | Gemini / OpenAI API | Smart transformations |
-| Queue System (Optional) | BullMQ + Redis | Retries and reliability |
+| Database | MongoDB | Flexible JSON schema for varying payloads |
+| Real-time Updates | Socket.io | Live log feed without page refresh |
+| AI Integration | Gemini / OpenAI API | Smart payload transformation and summarization |
+| Queue System (Optional) | BullMQ + Redis | Retry reliability and background job processing |
+
+Key library decisions:
+- `lodash.get` for safe field mapping inside transformation rules (no eval)
+- `expr-eval` for safely parsing filter condition expressions (e.g. `amount > 100`)
+- `Nodemailer` or `SendGrid` for email destination support
 
 ---
 
-# Core System Flow
-
-```txt
-External Service (GitHub / Stripe / Datadog)
-                │
-                │ POST webhook JSON
-                ▼
-
-┌──────────────────────────────────────────────┐
-│ HookFlow Endpoint: POST /hook/:id           │
-│----------------------------------------------│
-│ • Validate secret key (optional)            │
-│ • Save raw JSON to Logs collection          │
-│ • Emit socket event for live dashboard      │
-└──────────────────────────────────────────────┘
-                │
-                ▼
-
-┌──────────────────────────────────────────────┐
-│ Transformation Engine                       │
-│----------------------------------------------│
-│ • Manual field mapping (lodash.get)         │
-│ • Filter conditions (expr-eval)             │
-│ • AI summarization (Gemini/OpenAI)          │
-└──────────────────────────────────────────────┘
-                │
-                ▼
-
-┌──────────────────────────────────────────────┐
-│ Forwarder                                   │
-│----------------------------------------------│
-│ • Send Email (Nodemailer / SendGrid)        │
-│ • Send Discord / Slack webhook              │
-│ • Send Custom URL (axios/fetch)             │
-│ • Update logs with success/failure status   │
-└──────────────────────────────────────────────┘
-```
-
----
-
-# Feature Requirements
+# Development Phases
 
 ## Phase 1: Core Receiver
-
-- [ ] Create `POST /hook/:id` endpoint
-- [ ] Save `req.body` to MongoDB Logs collection
-- [ ] Return `200 OK`
-
----
+The public webhook endpoint. Accepts POST requests, saves raw payload to the database, and returns 200 OK immediately.
 
 ## Phase 2: Forwarder
-
-- [ ] Trigger forwarding after payload is saved
-- [ ] Start with `console.log`
-- [ ] Add Email support
-- [ ] Add Discord support
-- [ ] Update logs with:
-  - Status
-  - Destination response
-  - Errors
-
----
+Triggers after the payload is saved. Sends the payload to the configured destination. Updates the Delivery record with the result, status, and any errors.
 
 ## Phase 3: Dashboard
-
-- [ ] JWT Authentication
-- [ ] Register/Login system
-- [ ] Create, edit, delete flows
-- [ ] Generate unique webhook URLs
-- [ ] Live logs using Socket.io
-- [ ] Detailed log viewer showing:
-  - Raw payload
-  - Transformed payload
-  - Destination response
-
----
+JWT authentication, user registration and login, flow management (create, edit, delete), unique webhook URL generation, live log feed using Socket.io, and a detailed log viewer.
 
 ## Phase 4: Logic Engine
-
-- [ ] Manual mapping UI
-- [ ] Filter conditions
-
-Example:
-
-```txt
-Only forward if amount > 100
-```
-
-- [ ] AI prompt transformations
-
-Example:
-
-```txt
-Summarize this error log for my boss
-```
-
-- [ ] Safe expression parser
-- [ ] No direct `eval()` usage
-
----
+Manual field mapping UI, filter conditions (e.g. only forward if amount > 100), AI prompt transformations (e.g. summarize this error for non-technical users), and safe expression parsing without direct eval usage.
 
 ## Phase 5: Destinations
-
-- [ ] Email (Nodemailer / SendGrid)
-- [ ] Discord Webhook
-- [ ] Slack Webhook
-- [ ] Custom Webhook URL
+Full support for Email (Nodemailer / SendGrid), Discord webhooks, Slack webhooks, and custom webhook URLs.
 
 ---
 
-# Database Schema
+# Required Environment Variables
 
-## Flows Collection
-
-```json
-{
-  "_id": "ObjectId",
-  "userId": "ObjectId",
-  "name": "GitHub to Discord Alerts",
-  "webhookUrl": "/hook/abc-123",
-  "secretKey": "optional-secret-for-validation",
-  "isActive": true,
-  "transformationRules": {
-    "type": "manual",
-    "mapping": {
-      "discord_message": "body.head_commit.message"
-    },
-    "filter": "body.amount > 100",
-    "aiPrompt": "Summarize this JSON into a short alert"
-  },
-  "destination": {
-    "type": "discord",
-    "url": "https://discord.com/api/webhooks/...",
-    "emailConfig": {
-      "to": "team@company.com"
-    }
-  },
-  "createdAt": "Date"
-}
-```
-
----
-
-## Logs Collection
-
-```json
-{
-  "_id": "ObjectId",
-  "flowId": "ObjectId",
-  "rawPayload": {},
-  "transformedPayload": {},
-  "destinationResponse": {},
-  "status": "success",
-  "errorMessage": null,
-  "createdAt": "Date"
-}
-```
-
-### Field Explanation
-
-| Field | Description |
+| Variable | Purpose |
 |---|---|
-| rawPayload | Original webhook JSON |
-| transformedPayload | Payload after mapping/AI |
-| destinationResponse | Response from Discord/Email/API |
-| status | success or failed |
-| errorMessage | Failure reason if request fails |
-
----
-
-## Users Collection
-
-```json
-{
-  "_id": "ObjectId",
-  "email": "user@example.com",
-  "passwordHash": "bcrypt_hash",
-  "createdAt": "Date"
-}
-```
-
----
-
-# API Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/auth/register` | Create new user |
-| POST | `/auth/login` | Login and receive JWT |
-| GET | `/flows` | Get all flows |
-| POST | `/flows` | Create flow |
-| PUT | `/flows/:id` | Update flow |
-| DELETE | `/flows/:id` | Delete flow |
-| POST | `/hook/:id` | Public webhook receiver |
-| GET | `/logs/:flowId` | Get logs for a flow |
-| GET | `/logs/:flowId/live` | Live WebSocket logs |
-
----
-
-# Getting Started
-
-## Prerequisites
-
-- Node.js 18+
-- MongoDB (local or Atlas)
-- Optional:
-  - OpenAI API Key
-  - Gemini API Key
-
----
-
-# Installation
-
-```bash
-# Clone repository
-git clone https://github.com/yourusername/hookflow.git
-
-# Enter project directory
-cd hookflow
-
-# Install dependencies
-npm install
-
-# Create environment file
-cp .env.example .env
-
-# Edit .env with your credentials
-
-# Start MongoDB
-mongod
-
-# Run development server
-npm run dev
-```
-
----
-
-# Environment Variables
-
-## `.env`
-
-```env
-PORT=3000
-
-MONGODB_URI=mongodb://localhost:27017/hookflow
-
-JWT_SECRET=your-super-secret-key-change-this
-
-OPENAI_API_KEY=optional-if-using-ai
-
-GEMINI_API_KEY=optional-if-using-gemini
-
-EMAIL_HOST=smtp.gmail.com
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASS=your-app-password
-```
-
----
-
-# Example Workflow
-
-## GitHub Push → Discord Notification
-
-### Step 1: Create Flow
-
-Create a new flow in the HookFlow dashboard.
-
-### Step 2: Configure Flow
-
-| Field | Value |
-|---|---|
-| Name | GitHub Discord Alerts |
-| Destination | Discord Webhook |
-| Webhook URL | `https://discord.com/api/webhooks/xxx/yyy` |
-
-HookFlow generates:
-
-```txt
-https://hookflow.io/hook/abc-123
-```
-
----
-
-### Step 3: Configure GitHub Webhook
-
-Go to:
-
-```txt
-GitHub → Repository → Settings → Webhooks → Add webhook
-```
-
-### Configure:
-
-| Setting | Value |
-|---|---|
-| Payload URL | `https://hookflow.io/hook/abc-123` |
-| Content Type | `application/json` |
-| Events | Just the push event |
-
-Save the webhook.
-
----
-
-### Result
-
-Every GitHub push will:
-
-1. Send JSON payload to HookFlow
-2. HookFlow transforms data
-3. HookFlow forwards notification to Discord
+| `PORT` | Port the Express server listens on |
+| `MONGODB_URI` | MongoDB connection string |
+| `JWT_SECRET` | Secret key for signing and verifying JWTs |
+| `OPENAI_API_KEY` | Optional, only if using OpenAI for transformations |
+| `GEMINI_API_KEY` | Optional, only if using Gemini for transformations |
+| `EMAIL_HOST` | SMTP host for email destination support |
+| `EMAIL_USER` | SMTP email address |
+| `EMAIL_PASS` | SMTP app password |
 
 ---
 
@@ -462,9 +662,9 @@ Every GitHub push will:
 | Time to connect 2 services | 18 hours | 10 minutes |
 | Cost for 6 integrations | $10,800 | $100 |
 | Developer involvement | Required every time | Only once |
-| Visibility into failures | Hidden in logs | Live dashboard |
+| Visibility into failures | Hidden in server logs | Live dashboard |
 | Retry handling | Manual | Automatic |
-| API changes | Require code updates | Configure in UI |
+| API changes in source/destination | Require code updates | Reconfigure in UI |
 
 ---
 
@@ -472,55 +672,83 @@ Every GitHub push will:
 
 ## Reliability
 
-- [ ] Retry queue with exponential backoff
-- [ ] BullMQ integration
-- [ ] Redis queue system
-- [ ] Dead-letter queue
-
----
+- Retry queue with exponential backoff
+- BullMQ integration for background job processing
+- Redis-backed queue system
+- Dead-letter queue for permanently failed deliveries
 
 ## Security
 
-- [ ] Webhook signature verification
-- [ ] Rate limiting per flow
-- [ ] Idempotency keys
-- [ ] Secret-based validation
-
----
+- Webhook signature verification per flow
+- Rate limiting per flow
+- Idempotency keys to prevent duplicate processing
+- Secret-based request validation
 
 ## Developer Features
 
-- [ ] Export logs to CSV/JSON
-- [ ] Custom JavaScript transformations
-- [ ] Sandbox execution environment
-- [ ] Flow templates
-
----
+- Export delivery logs to CSV or JSON
+- Custom JavaScript transformation support
+- Sandboxed execution environment for custom code
+- Pre-built flow templates for common integrations
 
 ## Team Features
 
-- [ ] Team accounts
-- [ ] Organization workspaces
-- [ ] Shared dashboards
-- [ ] Role-based permissions
+- Team accounts
+- Organization workspaces
+- Shared dashboards across team members
+- Role-based access permissions
 
 ---
 
-# Final Vision
+# Critical Engineering Rule: Acknowledge First, Work Later
 
-HookFlow becomes a universal automation bridge between disconnected systems.
+## The Problem
 
-Instead of writing custom integrations repeatedly, developers configure flows visually while HookFlow handles:
+When an external service (GitHub, Stripe, etc.) sends a webhook to HookFlow, it starts a timer.
 
-- Webhook ingestion
-- Transformation
-- AI processing
-- Forwarding
-- Monitoring
-- Retries
-- Logging
-- Reliability
+If HookFlow does not respond within a few seconds, the source marks the delivery as **failed** and may retry — even if HookFlow was actually processing the request successfully in the background.
 
-The result:
+This causes duplicate deliveries and wasted retries.
 
-> Faster integrations, lower engineering costs, and complete visibility into automation pipelines.
+---
+
+## The Wrong Flow (Never Do This)
+
+```
+Source sends POST →
+  HookFlow receives it →
+    Saves to DB →
+      Calls AI to transform →
+        Forwards to Discord →
+          Discord responds →
+            NOW HookFlow sends 200 to source  ← Too late
+```
+
+The entire chain could take 3–10 seconds. If the AI call or destination is slow, the source times out and retries. You now have duplicate deliveries.
+
+---
+
+## The Correct Flow (Always Do This)
+
+```
+Source sends POST →
+  HookFlow receives it →
+    Saves raw payload to DB →
+      Immediately sends 200 OK to source  ← Source is satisfied, connection closed
+        (separately, in the background)
+          Transforms the payload →
+            Forwards to destination →
+              Updates the Delivery record with the result
+```
+
+The source gets its response in milliseconds. It does not care what happens after that.
+
+---
+
+## The Rule for Every Developer Working on This Codebase
+
+> The webhook receiver must return `200 OK` immediately after saving the raw payload to the database.
+>
+> Transformation, AI processing, and forwarding always happen **after** the response is sent, in a background process.
+>
+> Never put downstream work between the database save and the HTTP response.
