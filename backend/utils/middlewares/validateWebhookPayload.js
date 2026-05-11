@@ -5,7 +5,7 @@ export const validateWebhookPayload = (req, res, next) => {
         const data = req.body
         const { webhookPath } = req.params
 
-        if (!data) return sendResponse(res, 400, false, "No data Provided", data)
+        if (!data || Object.keys(data).length === 0) return sendResponse(res, 400, false, "No data Provided", data)
 
         if (!webhookPath || webhookPath.trim().length < 4) return sendResponse(res, 400, false, "Invalid or no hook url provided", webhookPath)
 

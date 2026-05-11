@@ -1,22 +1,17 @@
 import HookflowModel from "../db/models/Hookflow/Hookflow.model.js"
 import { sendResponse } from "../utils/index.js"
+import crypto from "crypto"
 
 // create a hookflow
 export const createHookflow = async (req, res) => {
-    const { userId, webhookName, webhookPath, webhookSecret, isHookActive, integration, pipeline, delivery } = req.body
-
+    const { webhookName, isHookActive, integration, pipeline, delivery } = req.body
+    const { userId } = req.user
+    const webhookPath = crypto.randomUUID()
+    const webhookSecret = crypto.randomBytes(32).toString("hex")
     try {
         // check if webhook name is already taken
-        const existingHookflow = await HookflowModel.findOne({ webhookName })
+        const existingHookflow = await HookflowModel.findOne({ webhookName, userId }) // this will throw 400 error if webhook name is already taken by same user
         if (existingHookflow) return sendResponse(res, 400, false, "Webhook name already taken")
-
-
-        if (!webhookPath || webhookPath.trim().length < 4 || webhookPath.includes(" ")) {
-            return sendResponse(res, 400, false, "Webhook path is required and must be at least 4 characters long and cannot contain spaces")
-        }
-
-        const existingWebhookPath = await HookflowModel.findOne({ webhookPath })
-        if (existingWebhookPath) return sendResponse(res, 400, false, "Webhook path already exists")
 
         // create new hookflow
         const hookflow = new HookflowModel({ userId, webhookName, webhookPath, webhookSecret, isHookActive, integration, pipeline, delivery })

@@ -44,7 +44,7 @@ const hookflowSchema = new Schema({
         default: {}
     },
     delivery: {  // destination, where the payload will go
-        destinationwebhookUrl: { // will be provided by user
+        destinationWebhookUrl: { // will be provided by user
             type: String,
             required: true
         },
