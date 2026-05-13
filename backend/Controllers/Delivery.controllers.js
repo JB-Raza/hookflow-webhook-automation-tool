@@ -29,7 +29,7 @@ export const createDelivery = async (req, res) => {
                 const destWebhookUrl = existingWebhookRecord.delivery.destinationWebhookUrl
                 const transformedPayload = transformRawPayload(rawPayload)
                 const result = await forwardTransformedPayloadToDest(destWebhookUrl, transformedPayload)
-
+                console.log("result", result)
                 await DeliveryModel.findByIdAndUpdate(newDelivery._id, {
                     deliveryStatus: "completed",
                     receiverResponseStatusCode: result.status,
@@ -60,6 +60,7 @@ export const getAllDeliveries = async (req, res) => {
     const { hookflowId } = req.params
     try {
         const deliveries = await DeliveryModel.find({ hookflowId })
+            .sort({ createdAt: -1 })
         return sendResponse(res, 200, true, "Deliveries retrieved successfully", { deliveries })
     } catch (error) {
         return sendResponse(res, 500, false, error?.message)

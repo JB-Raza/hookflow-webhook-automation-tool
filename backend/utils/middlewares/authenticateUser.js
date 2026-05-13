@@ -5,7 +5,8 @@ import "dotenv/config"
 
 
 export const authenticateUser = (req, res, next) => {
-    const { accessToken } = req.headers
+    const authHeader = req.headers.authorization
+    const accessToken = authHeader && authHeader.split(" ")[1]
 
     if (!accessToken) return sendResponse(res, 401, false, "Unauthorized access denied! user not authenticated!")
 
