@@ -318,11 +318,14 @@ Never move forward on a broken foundation.
 
 ---
 
-# Phase 12 — Transformation Engine: Field Mapping
+# Phase 12 — Transformation Engine: Field Mapping (Free Tier)
 
 **Goal:** Users can configure which fields to extract and rename before forwarding.
 
 **Why:** The raw payload from GitHub or Stripe is complex JSON. The destination (Discord, Slack) usually expects a simple, specific format.
+
+**Tier model:**
+This is the free tier transformation approach. It works when both the source and destination are known platforms from the supported enum list (github, stripe, discord, slack, etc.). Since both sides are known, you can ship pre-built transformer functions — one function per source→destination combination (e.g. githubPush→slack, stripePayment→discord). These are written once, run fast, and cost nothing per request. Field mapping is the manual, deterministic option for users who want predictable transformations without AI. The `other` option in the integration/delivery enums is the escape hatch that leads to AI transformation in Phase 14.
 
 ### Tasks
 
@@ -371,11 +374,14 @@ Never move forward on a broken foundation.
 
 ---
 
-# Phase 14 — AI Transformation (Gemini / OpenAI)
+# Phase 14 — AI Transformation (Gemini / OpenAI) (Premium Tier)
 
 **Goal:** Users can write an AI prompt that rewrites the payload before it is forwarded.
 
 **Why:** This is HookFlow's most powerful differentiator. A Stripe error JSON becomes a plain-English Slack message without any manual field mapping.
+
+**Tier model:**
+This is the premium tier transformation approach. It is used when the source or destination is set to `other` (custom/unknown platform), or when the user wants a dynamic, human-readable transformation instead of manual field mapping. The user writes a plain English prompt once when setting up the flow (e.g. "Summarize this GitHub push event as a Slack message with the committer's name and branch"). Your server sends the raw payload + prompt to Gemini/OpenAI and forwards whatever the AI returns. This works for any payload structure — GitHub, Stripe, or a completely custom webhook with unknown fields — because the AI reads the actual data and figures out the mapping itself. AI transformation and field mapping are mutually exclusive on a flow — a flow uses one or the other, not both.
 
 ### Tasks
 
@@ -548,6 +554,33 @@ Never move forward on a broken foundation.
 
 ---
 
+# Phase 21 — Load Testing with k6
+
+**Goal:** Measure the real performance of HookFlow under load — locally first, then against the hosted production server.
+
+**Why:** Knowing that the app works is not enough. You need to know how many concurrent webhooks it can handle, where it breaks, and what the latency looks like under stress. This is what separates a portfolio project from a production-grade system.
+
+### Tasks
+
+- Install k6 locally (https://k6.io/docs/get-started/installation/)
+- Create a `load-tests/` folder at the project root
+- Write a baseline test (`baseline.js`): 10 virtual users, 30 seconds, POST to the webhook receiver endpoint with a realistic GitHub-like payload
+- Write a stress test (`stress.js`): ramp from 10 to 500 virtual users over 2 minutes, hold, then ramp down
+- Write a spike test (`spike.js`): sudden burst of 1000 requests in 10 seconds to simulate a flood of webhooks
+- Measure and record: request duration (p50, p90, p99), failure rate, throughput (requests/sec)
+- Identify the bottleneck: is it the Express server, MongoDB write speed, or the forwarder HTTP call?
+- Run the same tests against the deployed production server (Railway/Render) and compare results
+- Document findings: what load the system handles comfortably, where it degrades, and what would need to change to scale further (e.g. connection pooling, horizontal scaling, queue workers)
+
+### Verify Output
+
+- k6 runs locally against `http://localhost:3000` with no errors at baseline load
+- Stress test reveals the breaking point (e.g. p99 latency spikes above 2s at X users)
+- Spike test shows how the system recovers after a sudden burst
+- Production test numbers are documented and compared to local results
+
+---
+
 # Summary Table
 
 
@@ -573,5 +606,6 @@ Never move forward on a broken foundation.
 | 18    | UI polish               | Production-quality interface       |
 | 19    | End-to-end testing      | Verified complete user journey     |
 | 20    | Deployment              | Live product on the internet       |
+| 21    | k6 load testing         | Performance benchmarks under load  |
 
 
