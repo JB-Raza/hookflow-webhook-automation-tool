@@ -1,6 +1,7 @@
 import HookflowModel from "../db/models/Hookflow/Hookflow.model.js"
 import DeliveryModel from "../db/models/Hookflow/Delivery.model.js"
 import { sendResponse } from "../utils/index.js"
+import { forwardTransformedPayloadToDest, transformRawPayload } from "../services/index.js"
 
 
 // creating a delivery
@@ -29,7 +30,6 @@ export const createDelivery = async (req, res) => {
                 const destWebhookUrl = existingWebhookRecord.delivery.destinationWebhookUrl
                 const transformedPayload = transformRawPayload(rawPayload)
                 const result = await forwardTransformedPayloadToDest(destWebhookUrl, transformedPayload)
-                console.log("result", result)
                 await DeliveryModel.findByIdAndUpdate(newDelivery._id, {
                     deliveryStatus: "completed",
                     receiverResponseStatusCode: result.status,
@@ -64,37 +64,5 @@ export const getAllDeliveries = async (req, res) => {
         return sendResponse(res, 200, true, "Deliveries retrieved successfully", { deliveries })
     } catch (error) {
         return sendResponse(res, 500, false, error?.message)
-    }
-}
-
-
-// transforming the payload into readable format through AI
-function transformRawPayload(payload) {
-    console.log("payload transformed")
-    return payload
-}
-
-// forwarding the transformed payload to the reciever destination
-async function forwardTransformedPayloadToDest(destWebhookUrl, transformedPayload) {
-    const response = await fetch(destWebhookUrl, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify(transformedPayload)
-    })
-    const rawText = await response.text()
-    if (!response.ok) {
-        throw new Error(`Failed to forward the transformed payload to the destination. Status: ${response.status}. Response: ${rawText}`)
-    }
-    let parsedData;
-    try {
-        parsedData = JSON.parse(rawText)
-    } catch (error) {
-        parsedData = rawText
-    }
-    return {
-        status: response.status,
-        data: parsedData
     }
 }
