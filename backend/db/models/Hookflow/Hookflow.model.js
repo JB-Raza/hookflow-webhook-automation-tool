@@ -51,7 +51,7 @@ const hookflowSchema = new Schema({
         destination: {
             type: String,
             required: true,
-            enum: ['github', 'stripe', 'discord', 'other', 'custom']
+            enum: ['github', 'stripe', 'discord', 'slack', 'other', 'custom']
         },
         verification: {
             type: Boolean,
