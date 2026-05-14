@@ -8,6 +8,8 @@ Each phase has a clear goal, a list of tasks, and a visible output you can test 
 Complete each phase fully before moving to the next.
 Never move forward on a broken foundation.
 
+**Architecture principle:** Complete the entire backend system first (Phases 1-12), then build the frontend on top of a fully stable API (Phases 13-18). This means the UI is built exactly once and never needs to be revisited because a backend feature wasn't ready yet.
+
 ---
 
 ## Current State (Before Phase 1)
@@ -180,160 +182,20 @@ Never move forward on a broken foundation.
 
 ---
 
-# Phase 7 — Next.js Project Setup + Routing Structure
-
-**Goal:** Initialize the frontend project and set up the complete page structure.
-
-**Why:** Before building any UI, the folder structure and routing must be correct. Fixing architecture mid-way in Next.js is painful.
-
-### Tasks
-
-- Create the Next.js app inside hookflow-webhook-automation-tool/frontend/ using App Router
-- Set up the folder structure:
-  - /app/(auth)/login
-  - /app/(auth)/register
-  - /app/(dashboard)/flows
-  - /app/(dashboard)/flows/[id]
-  - /app/(dashboard)/logs/[flowId]
-  - /app/(dashboard)/logs/[flowId]/[deliveryId]
-- Create a simple layout for the auth group (centered card)
-- Create a sidebar layout for the dashboard group
-- Set up a global CSS reset and color variables
-- Install and configure axios for API calls
-- Create an api/ utility file that attaches the JWT token to every request automatically
-- Set up environment variable: NEXT_PUBLIC_API_URL pointing to the backend
-
-### Verify Output
-
-- Navigate to /login → see a centered layout placeholder
-- Navigate to /flows → see a sidebar layout placeholder
-- The routing structure is fully defined even if pages are empty
-
----
-
-# Phase 8 — Auth UI (Register + Login Pages)
-
-**Goal:** Working register and login pages connected to the backend.
-
-**Why:** Everything else in the dashboard requires being logged in. Auth must come first.
-
-### Tasks
-
-- Build the Register page: name, email, password fields — calls POST /api/user/register
-- Build the Login page: email, password fields — calls POST /api/user/login
-- On successful login: store the JWT token in localStorage (or a cookie)
-- After login: redirect to /flows
-- Create an auth context (React Context) that provides the current user and token app-wide
-- Create a protected route wrapper that redirects to /login if no token is found
-- Wrap all dashboard routes with the protected route wrapper
-- Show loading state while checking auth
-- Show error messages inline (wrong password, user already exists)
-
-### Verify Output
-
-- Visit /flows without being logged in → redirected to /login
-- Register a new account → redirected to /flows
-- Login with wrong password → see error message
-- Login successfully → token stored, land on /flows
-- Refresh the page → still logged in
-
----
-
-# Phase 9 — Flows Dashboard Page
-
-**Goal:** The main dashboard page where users manage their flows.
-
-**Why:** This is the primary UI of the product. Users live here.
-
-### Tasks
-
-- Fetch and display all flows for the logged-in user using GET /api/hookflow/
-- Show each flow as a card with: name, status badge (active/inactive), webhook URL, created date
-- Add a "Copy URL" button next to the webhook URL
-- Add a Create Flow button that opens a form/modal
-- The create form collects: flow name, source provider, destination type, destination URL
-- On submit: call POST /api/hookflow/create — on success, add the new flow to the list without a page refresh
-- Add a toggle button to enable/disable each flow (calls PATCH /api/hookflow/:id/toggle)
-- Add a delete button with a confirmation step (calls DELETE /api/hookflow/:id)
-- Show an empty state when the user has no flows yet
-
-### Verify Output
-
-- After login you see all your flows
-- Create a new flow → it appears instantly in the list
-- Toggle a flow → the badge updates immediately
-- Delete a flow → it disappears from the list
-- Copy the webhook URL → it's on your clipboard
-
----
-
-# Phase 10 — Logs Dashboard Page
-
-**Goal:** Users can view the full delivery history for each flow.
-
-**Why:** Visibility into what happened is one of the core promises of HookFlow.
-
-### Tasks
-
-- Clicking a flow opens the logs page for that flow: /dashboard/logs/[flowId]
-- Fetch deliveries from GET /api/delivery/:hookflowId (paginated)
-- Display each delivery as a row: timestamp, status badge, destination response code
-- Clicking a delivery opens the detail page: /dashboard/logs/[flowId]/[deliveryId]
-- The detail page shows: raw incoming payload (formatted JSON), destination response body, error message if any, retry count, all timestamps
-- Add a filter bar to filter by status (completed, failed, retrying)
-- Add a Load More button for pagination
-- Handle the empty state (no deliveries yet)
-
-### Verify Output
-
-- Trigger a few webhooks from Postman → navigate to logs page and see them
-- Click a delivery → see the full payload details
-- Status badges visible: green for completed, red for failed
-
----
-
-# Phase 11 — Real-Time Log Feed (Socket.io)
-
-**Goal:** New deliveries appear on the logs page instantly without refreshing.
-
-**Why:** This is a major UX differentiator. Users watching their dashboard see live webhook activity.
-
-### Tasks
-
-- Install Socket.io on the backend
-- When a new Delivery is created, emit a socket event to the room for that hookflowId
-- On the frontend, install socket.io-client
-- When the logs page loads, connect to the socket server and join the room for the current hookflowId
-- When a new delivery event arrives, prepend it to the list
-- Show a live indicator ("Live" badge) when socket is connected
-- Disconnect from the socket room when the user navigates away
-
-**Key concept to understand:** Socket.io uses the concept of rooms. Each flow gets its own room identified by its hookflowId. Only clients viewing that flow's logs page are in that room. When a webhook arrives, only they get notified — not every user on the platform.
-
-### Verify Output
-
-- Open the logs page in the browser
-- Trigger a webhook from Postman
-- Without refreshing, a new row appears at the top of the logs list
-
----
-
-# Phase 12 — Transformation Engine: Field Mapping (Free Tier)
+# Phase 7 — Transformation Engine: Field Mapping (Free Tier)
 
 **Goal:** Users can configure which fields to extract and rename before forwarding.
 
 **Why:** The raw payload from GitHub or Stripe is complex JSON. The destination (Discord, Slack) usually expects a simple, specific format.
 
 **Tier model:**
-This is the free tier transformation approach. It works when both the source and destination are known platforms from the supported enum list (github, stripe, discord, slack, etc.). Since both sides are known, you can ship pre-built transformer functions — one function per source→destination combination (e.g. githubPush→slack, stripePayment→discord). These are written once, run fast, and cost nothing per request. Field mapping is the manual, deterministic option for users who want predictable transformations without AI. The `other` option in the integration/delivery enums is the escape hatch that leads to AI transformation in Phase 14.
+This is the free tier transformation approach. It works when both the source and destination are known platforms from the supported enum list (github, stripe, discord, slack, etc.). Since both sides are known, you can ship pre-built transformer functions — one function per source→destination combination (e.g. githubPush→slack, stripePayment→discord). These are written once, run fast, and cost nothing per request. Field mapping is the manual, deterministic option for users who want predictable transformations without AI. The `other` option in the integration/delivery enums is the escape hatch that leads to AI transformation in Phase 17.
 
 ### Tasks
 
 - Add a transformationRules field to the Hookflow schema as a structured object
 - Support a mapping mode: user defines output field name → input field path (e.g. message: "body.head_commit.message")
 - In the forwarder service: before forwarding, run the mapping rules using lodash.get to safely extract values
-- Build the mapping UI in the Flow Editor page: add/remove field pairs
-- On save: persist the mapping rules to the Hookflow document
 - If no transformation is configured: forward the raw payload as-is
 - Store the processedPayloadForDestination in the Delivery record
 
@@ -344,66 +206,11 @@ This is the free tier transformation approach. It works when both the source and
 - Configure a flow with mapping: { text: "body.head_commit.message" }
 - Trigger a GitHub-like webhook with a head_commit.message field
 - The destination receives only { text: "your commit message" } — not the full raw payload
-- The Delivery detail page shows both the raw and processed payloads
+- The Delivery detail record shows both the raw and processed payloads
 
 ---
 
-# Phase 13 — Transformation Engine: Filter Conditions
-
-**Goal:** Users can set a condition that decides whether a webhook gets forwarded at all.
-
-**Why:** Not every event from a source is relevant. A Stripe webhook might fire for every transaction — but you only care about failed ones over $100.
-
-### Tasks
-
-- Add a filterCondition field (string) to the Hookflow schema
-- Install expr-eval library on the backend
-- In the forwarder service: before forwarding, evaluate the filter condition against the raw payload
-- If the condition evaluates to false: set deliveryStatus to 'filtered' and do not forward
-- If no condition is set: always forward
-- Build a filter condition input in the Flow Editor UI
-- Show 'filtered' as a status in the delivery logs with its own badge color
-
-**Key concept to understand:** expr-eval safely parses and evaluates mathematical and logical expressions like "amount > 100" without executing arbitrary code. This is why we use it instead of eval().
-
-### Verify Output
-
-- Set filter: "amount > 100" on a flow
-- Send payload with amount: 50 → delivery saved with status 'filtered', destination not called
-- Send payload with amount: 200 → delivery forwarded normally
-
----
-
-# Phase 14 — AI Transformation (Gemini / OpenAI) (Premium Tier)
-
-**Goal:** Users can write an AI prompt that rewrites the payload before it is forwarded.
-
-**Why:** This is HookFlow's most powerful differentiator. A Stripe error JSON becomes a plain-English Slack message without any manual field mapping.
-
-**Tier model:**
-This is the premium tier transformation approach. It is used when the source or destination is set to `other` (custom/unknown platform), or when the user wants a dynamic, human-readable transformation instead of manual field mapping. The user writes a plain English prompt once when setting up the flow (e.g. "Summarize this GitHub push event as a Slack message with the committer's name and branch"). Your server sends the raw payload + prompt to Gemini/OpenAI and forwards whatever the AI returns. This works for any payload structure — GitHub, Stripe, or a completely custom webhook with unknown fields — because the AI reads the actual data and figures out the mapping itself. AI transformation and field mapping are mutually exclusive on a flow — a flow uses one or the other, not both.
-
-### Tasks
-
-- Add an aiPrompt field to the Hookflow schema (nullable string)
-- Install the Google Generative AI SDK or OpenAI SDK
-- In the forwarder service: if aiPrompt is set, send the raw payload + the prompt to the AI API
-- The AI returns a processed string or JSON object
-- Use the AI output as the forwarded payload
-- If AI call fails: log the error, set deliveryStatus to 'failed_permanently', do not forward silently
-- Add an AI prompt input field in the Flow Editor UI
-- Make it clear in the UI that AI transformation replaces field mapping — they are mutually exclusive
-
-### Verify Output
-
-- Set prompt: "Summarize this GitHub push event in one sentence for a non-technical person."
-- Trigger a push webhook
-- Discord receives a human-readable sentence, not raw JSON
-- The Delivery detail shows the AI output in the processedPayload field
-
----
-
-# Phase 15 — Retry System (BullMQ + Redis)
+# Phase 8 — Retry System (BullMQ + Redis)
 
 **Goal:** When a destination fails, HookFlow automatically retries with delays between attempts.
 
@@ -432,7 +239,59 @@ This is the premium tier transformation approach. It is used when the source or 
 
 ---
 
-# Phase 16 — Secret Verification (HMAC Signature)
+# Phase 9 — Filter Conditions
+
+**Goal:** Users can set a condition that decides whether a webhook gets forwarded at all.
+
+**Why:** Not every event from a source is relevant. A Stripe webhook might fire for every transaction — but you only care about failed ones over $100.
+
+### Tasks
+
+- Add a filterCondition field (string) to the Hookflow schema
+- Install expr-eval library on the backend
+- In the forwarder service: before forwarding, evaluate the filter condition against the raw payload
+- If the condition evaluates to false: set deliveryStatus to 'filtered' and do not forward
+- If no condition is set: always forward
+- Show 'filtered' as a status in the delivery logs
+
+**Key concept to understand:** expr-eval safely parses and evaluates mathematical and logical expressions like "amount > 100" without executing arbitrary code. This is why we use it instead of eval().
+
+### Verify Output
+
+- Set filter: "amount > 100" on a flow
+- Send payload with amount: 50 → delivery saved with status 'filtered', destination not called
+- Send payload with amount: 200 → delivery forwarded normally
+
+---
+
+# Phase 10 — Failure Email Notification
+
+**Goal:** When a delivery exhausts all retries and reaches 'failed_permanently', automatically send an email to the flow owner notifying them of the failure.
+
+**Why:** Users should not need to watch the dashboard to know something broke. A real product proactively alerts users when their integrations fail silently.
+
+### Tasks
+
+- Install Nodemailer (this will also be reused in Phase 11 for email destinations)
+- Create an email service in services/email.service.js
+- Configure SMTP credentials in .env (use Gmail SMTP or Resend for development)
+- After BullMQ exhausts all retries and marks a delivery as 'failed_permanently':
+  - Fetch the parent hookflow to get the flow name and userId
+  - Fetch the user record to get their email address
+  - Send a notification email containing: flow name, failure timestamp, error message from the delivery record, number of attempts made, link to the delivery detail page (once frontend exists)
+- Keep the email template simple — plain text with clear information is enough for now
+- The email send failure must not crash the system — wrap in try/catch and log silently if email fails
+
+### Verify Output
+
+- Point a flow at a dead destination URL
+- Trigger a webhook
+- After all retries are exhausted, receive an email at the registered user address
+- Email contains the flow name, error reason, and attempt count
+
+---
+
+# Phase 11 — Secret Verification (HMAC Signature)
 
 **Goal:** Verify that incoming webhooks are genuinely from the expected source.
 
@@ -457,21 +316,21 @@ This is the premium tier transformation approach. It is used when the source or 
 
 ---
 
-# Phase 17 — Email Destination Support
+# Phase 12 — Email Destination Support
 
 **Goal:** Users can configure a flow to send an email instead of (or in addition to) a webhook.
 
 **Why:** Email is the most universal destination. Many teams want webhook events delivered to an inbox.
 
+**Note:** Nodemailer is already installed and configured from Phase 10. This phase extends that service for a different use case — sending payload content to a recipient as a destination, rather than sending failure alerts to the flow owner.
+
 ### Tasks
 
-- Install Nodemailer
 - Add email as a destination type in the Hookflow schema
 - Add emailConfig to the delivery config: to, subject template
 - In the forwarder service: detect destination type and branch accordingly
-- For email: compose the email body using the processed payload, send via SMTP
+- For email: compose the email body using the processed payload, send via the existing email service
 - The subject can reference a field from the payload (e.g. "Payment failed: {{amount}}")
-- Add email destination configuration in the Flow Editor UI
 
 ### Verify Output
 
@@ -481,7 +340,174 @@ This is the premium tier transformation approach. It is used when the source or 
 
 ---
 
-# Phase 18 — UI Polish and Error States
+# Phase 13 — Next.js Project Setup + Routing Structure
+
+**Goal:** Initialize the frontend project and set up the complete page structure.
+
+**Why:** The backend is now fully complete. Before building any UI, the folder structure and routing must be correct. Fixing architecture mid-way in Next.js is painful.
+
+### Tasks
+
+- Create the Next.js app inside hookflow-webhook-automation-tool/frontend/ using App Router
+- Set up the folder structure:
+  - /app/(auth)/login
+  - /app/(auth)/register
+  - /app/(dashboard)/flows
+  - /app/(dashboard)/flows/[id]
+  - /app/(dashboard)/logs/[flowId]
+  - /app/(dashboard)/logs/[flowId]/[deliveryId]
+- Create a simple layout for the auth group (centered card)
+- Create a sidebar layout for the dashboard group
+- Set up a global CSS reset and color variables
+- Install and configure axios for API calls
+- Create an api/ utility file that attaches the JWT token to every request automatically
+- Set up environment variable: NEXT_PUBLIC_API_URL pointing to the backend
+
+### Verify Output
+
+- Navigate to /login → see a centered layout placeholder
+- Navigate to /flows → see a sidebar layout placeholder
+- The routing structure is fully defined even if pages are empty
+
+---
+
+# Phase 14 — Auth UI (Register + Login Pages)
+
+**Goal:** Working register and login pages connected to the backend.
+
+**Why:** Everything else in the dashboard requires being logged in. Auth must come first.
+
+### Tasks
+
+- Build the Register page: name, email, password fields — calls POST /api/user/register
+- Build the Login page: email, password fields — calls POST /api/user/login
+- On successful login: store the JWT token in localStorage (or a cookie)
+- After login: redirect to /flows
+- Create an auth context (React Context) that provides the current user and token app-wide
+- Create a protected route wrapper that redirects to /login if no token is found
+- Wrap all dashboard routes with the protected route wrapper
+- Show loading state while checking auth
+- Show error messages inline (wrong password, user already exists)
+
+### Verify Output
+
+- Visit /flows without being logged in → redirected to /login
+- Register a new account → redirected to /flows
+- Login with wrong password → see error message
+- Login successfully → token stored, land on /flows
+- Refresh the page → still logged in
+
+---
+
+# Phase 15 — Flows Dashboard Page
+
+**Goal:** The main dashboard page where users manage their flows.
+
+**Why:** This is the primary UI of the product. Users live here.
+
+### Tasks
+
+- Fetch and display all flows for the logged-in user using GET /api/hookflow/
+- Show each flow as a card with: name, status badge (active/inactive), webhook URL, created date
+- Add a "Copy URL" button next to the webhook URL
+- Add a Create Flow button that opens a form/modal
+- The create form collects: flow name, source provider, destination type, destination URL
+- On submit: call POST /api/hookflow/create — on success, add the new flow to the list without a page refresh
+- Add a toggle button to enable/disable each flow (calls PATCH /api/hookflow/:id/toggle)
+- Add a delete button with a confirmation step (calls DELETE /api/hookflow/:id)
+- Show an empty state when the user has no flows yet
+
+### Verify Output
+
+- After login you see all your flows
+- Create a new flow → it appears instantly in the list
+- Toggle a flow → the badge updates immediately
+- Delete a flow → it disappears from the list
+- Copy the webhook URL → it's on your clipboard
+
+---
+
+# Phase 16 — Logs Dashboard Page
+
+**Goal:** Users can view the full delivery history for each flow.
+
+**Why:** Visibility into what happened is one of the core promises of HookFlow.
+
+### Tasks
+
+- Clicking a flow opens the logs page for that flow: /dashboard/logs/[flowId]
+- Fetch deliveries from GET /api/delivery/:hookflowId (paginated)
+- Display each delivery as a row: timestamp, status badge, destination response code
+- Clicking a delivery opens the detail page: /dashboard/logs/[flowId]/[deliveryId]
+- The detail page shows: raw incoming payload (formatted JSON), destination response body, error message if any, retry count, all timestamps
+- Add a filter bar to filter by status (completed, failed, retrying, filtered)
+- Add a Load More button for pagination
+- Handle the empty state (no deliveries yet)
+
+### Verify Output
+
+- Trigger a few webhooks from Postman → navigate to logs page and see them
+- Click a delivery → see the full payload details
+- Status badges visible: green for completed, red for failed, yellow for retrying, grey for filtered
+
+---
+
+# Phase 17 — Real-Time Log Feed (Socket.io)
+
+**Goal:** New deliveries appear on the logs page instantly without refreshing.
+
+**Why:** This is a major UX differentiator. Users watching their dashboard see live webhook activity.
+
+### Tasks
+
+- Install Socket.io on the backend
+- When a new Delivery is created, emit a socket event to the room for that hookflowId
+- On the frontend, install socket.io-client
+- When the logs page loads, connect to the socket server and join the room for the current hookflowId
+- When a new delivery event arrives, prepend it to the list
+- Show a live indicator ("Live" badge) when socket is connected
+- Disconnect from the socket room when the user navigates away
+
+**Key concept to understand:** Socket.io uses the concept of rooms. Each flow gets its own room identified by its hookflowId. Only clients viewing that flow's logs page are in that room. When a webhook arrives, only they get notified — not every user on the platform.
+
+### Verify Output
+
+- Open the logs page in the browser
+- Trigger a webhook from Postman
+- Without refreshing, a new row appears at the top of the logs list
+
+---
+
+# Phase 18 — AI Transformation (Gemini / OpenAI) (Premium Tier)
+
+**Goal:** Users can write an AI prompt that rewrites the payload before it is forwarded.
+
+**Why:** This is HookFlow's most powerful differentiator. A Stripe error JSON becomes a plain-English Slack message without any manual field mapping.
+
+**Tier model:**
+This is the premium tier transformation approach. It is used when the source or destination is set to `other` (custom/unknown platform), or when the user wants a dynamic, human-readable transformation instead of manual field mapping. The user writes a plain English prompt once when setting up the flow (e.g. "Summarize this GitHub push event as a Slack message with the committer's name and branch"). Your server sends the raw payload + prompt to Gemini/OpenAI and forwards whatever the AI returns. This works for any payload structure — GitHub, Stripe, or a completely custom webhook with unknown fields — because the AI reads the actual data and figures out the mapping itself. AI transformation and field mapping are mutually exclusive on a flow — a flow uses one or the other, not both.
+
+### Tasks
+
+- Add an aiPrompt field to the Hookflow schema (nullable string)
+- Install the Google Generative AI SDK or OpenAI SDK
+- In the forwarder service: if aiPrompt is set, send the raw payload + the prompt to the AI API
+- The AI returns a processed string or JSON object
+- Use the AI output as the forwarded payload
+- If AI call fails: log the error, set deliveryStatus to 'failed_permanently', do not forward silently
+- Add an AI prompt input field in the Flow Editor UI
+- Make it clear in the UI that AI transformation replaces field mapping — they are mutually exclusive
+
+### Verify Output
+
+- Set prompt: "Summarize this GitHub push event in one sentence for a non-technical person."
+- Trigger a push webhook
+- Discord receives a human-readable sentence, not raw JSON
+- The Delivery detail shows the AI output in the processedPayload field
+
+---
+
+# Phase 19 — UI Polish and Error States
 
 **Goal:** The dashboard looks and behaves like a real product, not a prototype.
 
@@ -506,7 +532,7 @@ This is the premium tier transformation approach. It is used when the source or 
 
 ---
 
-# Phase 19 — End-to-End Testing
+# Phase 20 — End-to-End Testing
 
 **Goal:** Manually test the complete user journey from sign-up to receiving a forwarded webhook.
 
@@ -525,6 +551,8 @@ This is the premium tier transformation approach. It is used when the source or 
 - Test the filter condition — confirm filtered deliveries do not reach the destination
 - Test a wrong HMAC secret — confirm 401 response
 - Test retry: point to a dead URL, confirm retries happen and status updates
+- Test failure email: confirm the notification email arrives after retries exhaust
+- Test AI transformation: confirm prompt rewrites the payload before forwarding
 
 ### Verify Output
 
@@ -532,7 +560,7 @@ This is the premium tier transformation approach. It is used when the source or 
 
 ---
 
-# Phase 20 — Deployment
+# Phase 21 — Deployment
 
 **Goal:** HookFlow is live on the internet with a real URL.
 
@@ -554,7 +582,7 @@ This is the premium tier transformation approach. It is used when the source or 
 
 ---
 
-# Phase 21 — Load Testing with k6
+# Phase 22 — Load Testing with k6
 
 **Goal:** Measure the real performance of HookFlow under load — locally first, then against the hosted production server.
 
@@ -584,28 +612,27 @@ This is the premium tier transformation approach. It is used when the source or 
 # Summary Table
 
 
-| Phase | What You Build          | Visible Output                     |
-| ----- | ----------------------- | ---------------------------------- |
-| 1     | Fix foundation bugs     | Secure, correct existing endpoints |
-| 2     | Harden the receiver     | Robust public webhook endpoint     |
-| 3     | Auth middleware         | Protected routes with JWT          |
-| 4     | Hookflow CRUD API       | Full flow management via API       |
-| 5     | Basic forwarder         | Payload reaches destination        |
-| 6     | Delivery history API    | Query delivery logs via API        |
-| 7     | Next.js setup + routing | Frontend structure in place        |
-| 8     | Auth UI                 | Working login and register pages   |
-| 9     | Flows dashboard         | Manage flows from the browser      |
-| 10    | Logs dashboard          | Browse delivery history in UI      |
-| 11    | Real-time feed          | Live webhook events in dashboard   |
-| 12    | Field mapping           | Custom payload reshaping           |
-| 13    | Filter conditions       | Conditional forwarding             |
-| 14    | AI transformation       | Human-readable forwarded messages  |
-| 15    | Retry system            | Automatic retries with backoff     |
-| 16    | Secret verification     | HMAC signature validation          |
-| 17    | Email destination       | Webhooks delivered to inbox        |
-| 18    | UI polish               | Production-quality interface       |
-| 19    | End-to-end testing      | Verified complete user journey     |
-| 20    | Deployment              | Live product on the internet       |
-| 21    | k6 load testing         | Performance benchmarks under load  |
-
-
+| Phase | What You Build                  | Visible Output                          |
+| ----- | ------------------------------- | --------------------------------------- |
+| 1     | Fix foundation bugs             | Secure, correct existing endpoints      |
+| 2     | Harden the receiver             | Robust public webhook endpoint          |
+| 3     | Auth middleware                 | Protected routes with JWT               |
+| 4     | Hookflow CRUD API               | Full flow management via API            |
+| 5     | Basic forwarder                 | Payload reaches destination             |
+| 6     | Delivery history API            | Query delivery logs via API             |
+| 7     | Field mapping (free tier)       | Custom payload reshaping                |
+| 8     | Retry system                    | Automatic retries with backoff          |
+| 9     | Filter conditions               | Conditional forwarding                  |
+| 10    | Failure email notification      | Alert email when flow fails permanently |
+| 11    | Secret verification (HMAC)      | Authenticated webhook sources           |
+| 12    | Email destination               | Webhooks delivered to inbox             |
+| 13    | Next.js setup + routing         | Frontend structure in place             |
+| 14    | Auth UI                         | Working login and register pages        |
+| 15    | Flows dashboard                 | Manage flows from the browser           |
+| 16    | Logs dashboard                  | Browse delivery history in UI           |
+| 17    | Real-time feed (Socket.io)      | Live webhook events in dashboard        |
+| 18    | AI transformation (premium)     | Human-readable forwarded messages       |
+| 19    | UI polish                       | Production-quality interface            |
+| 20    | End-to-end testing              | Verified complete user journey          |
+| 21    | Deployment                      | Live product on the internet            |
+| 22    | k6 load testing                 | Performance benchmarks under load       |

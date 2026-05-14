@@ -21,7 +21,7 @@ app.use(cors({
 // routes
 app.use("/api/user", authRoutes)
 app.use("/api/hookflow", hookflowRoutes)
-app.use("/delivery", deliveryRoutes)
+app.use("/api/delivery", deliveryRoutes)
 
 // 404 fallback
 app.use((req, res) => {

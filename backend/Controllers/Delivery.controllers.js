@@ -1,6 +1,6 @@
 import HookflowModel from "../db/models/Hookflow/Hookflow.model.js"
 import DeliveryModel from "../db/models/Hookflow/Delivery.model.js"
-import { sendResponse } from "../utils/index.js"
+import { sendResponse, validateObjectId, verifyHookflowOwnership } from "../utils/index.js"
 import { forwardTransformedPayloadToDest, transformRawPayload } from "../services/index.js"
 
 
@@ -56,13 +56,45 @@ export const createDelivery = async (req, res) => {
 
 
 // get all deliveries. this will be used to maintain history of deliveries for a specific hookflow
-export const getAllDeliveries = async (req, res) => {
+export const getAllDeliveriesWithLimit = async (req, res) => {
     const { hookflowId } = req.params
+    // implement pagination
+    // const { page = 1, limit  } = req.query // here i will be getting string so i need to parse them into int
+    const page = parseInt(req.query.page) || 1
+    const limit = parseInt(req.query.limit) || 10
+    const skipDeliveries = (page - 1) * limit
     try {
-        const deliveries = await DeliveryModel.find({ hookflowId })
-            .sort({ createdAt: -1 })
+        if (!validateObjectId(hookflowId)) return sendResponse(res, 400, false, "Invalid hookflow id")
+
+        const checkOwnership = await verifyHookflowOwnership(hookflowId, req, res)
+        if (!checkOwnership.isOwner) return sendResponse(res, checkOwnership.status, false, checkOwnership.message)
+
+        const deliveries = await DeliveryModel.find({ hookflowId }).sort({ createdAt: -1 }).skip(skipDeliveries).limit(limit)
+
         return sendResponse(res, 200, true, "Deliveries retrieved successfully", { deliveries })
     } catch (error) {
         return sendResponse(res, 500, false, error?.message)
     }
 }
+
+
+// get single delivery details
+export const getSingleDeliveryDetails = async (req, res) => {
+    const { hookflowId, deliveryId } = req.params
+    try {
+        if (!validateObjectId(hookflowId)) return sendResponse(res, 400, false, "Invalid Hookflow id")
+
+        const checkOwnership = await verifyHookflowOwnership(hookflowId, req, res)
+        if (!checkOwnership.isOwner) return sendResponse(res, checkOwnership.status, false, checkOwnership.message)
+
+        if (!validateObjectId(deliveryId)) return sendResponse(res, 400, false, "Invalid delivery id")
+
+        const deliveryItem = await DeliveryModel.findOne({ _id: deliveryId })
+        if (!deliveryItem) return sendResponse(res, 404, false, "Delivery doesn't exist with given ID")
+
+        return sendResponse(res, 200, true, "Delivery retrieved successfully", { deliveryItem })
+    } catch (error) {
+        return sendResponse(res, 500, false, error?.message)
+    }
+}
+
